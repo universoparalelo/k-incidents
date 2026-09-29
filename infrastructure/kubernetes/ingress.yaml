@@ -1,0 +1,45 @@
+# Reemplaza a infrastructure/nginx/nginx.conf: rutea por path a cada Service
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opsboard
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 3000
+          - path: /health           # explícito: la web también tiene /health
+            pathType: Exact
+            backend:
+              service:
+                name: api
+                port:
+                  number: 3000
+          - path: /ready
+            pathType: Exact
+            backend:
+              service:
+                name: api
+                port:
+                  number: 3000
+          - path: /whoami
+            pathType: Exact
+            backend:
+              service:
+                name: api
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix        # todo lo demás va al front
+            backend:
+              service:
+                name: web
+                port:
+                  number: 80

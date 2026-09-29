@@ -1,0 +1,58 @@
+# API: 3 réplicas balanceadas por el Service "api"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/frandschz/opsboard-api:sha-5f00572
+          ports:
+            - containerPort: 3000
+          env:
+            - name: REDIS_HOST
+              value: "redis"        # nombre del Service de Redis
+            - name: REDIS_PORT
+              value: "6379"
+            - name: PORT
+              value: "3000"
+            - name: FLEET_SIZE
+              value: "3"            # cambialo a mano si escalás
+            - name: INSTANCE_ID     # el nombre del pod, en vez de api-1/2/3 fijo
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          readinessProbe:           # si Redis no responde, el pod no recibe tráfico
+            httpGet:
+              path: /ready
+              port: 3000
+            periodSeconds: 5
+          livenessProbe:            # si la app se cuelga, Kubernetes la reinicia
+            httpGet:
+              path: /health
+              port: 3000
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 3000
+      targetPort: 3000
